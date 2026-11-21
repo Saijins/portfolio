@@ -51,7 +51,8 @@ try {
     assert.equal(await page.locator(".terms").evaluate(el => getComputedStyle(el).display), "inline");
     assert.equal(await page.locator(".typed-service").count(), 0);
     assert.equal(await page.locator(".hero-backdrop canvas").count(), 0);
-    assert.notEqual(await page.locator(".shader-plane").evaluate(el => getComputedStyle(el).backgroundImage), "none");
+    assert.equal(await page.locator(".shader-plane").evaluate(el => getComputedStyle(el).backgroundImage), "none");
+    assert.equal(await page.locator(".hero").evaluate(el => getComputedStyle(el).backgroundColor), "rgb(0, 0, 0)");
     await heroProjects.click();
     assert.equal(new URL(page.url()).hash, "#projekte");
     assert.equal(await page.locator(".project-card").count(), 2);
@@ -118,7 +119,6 @@ try {
   };
   const nameReveal = await page.locator(".name").evaluate(animationWindow);
   assert.ok(nameReveal.end < sliceDelays[0]);
-  assert.equal(await page.locator(".hero").evaluate(el => getComputedStyle(el, "::before").backgroundColor), "rgb(0, 0, 0)");
   for (const part of await page.locator(".hero-backdrop, .topnav").all()) {
     const reveal = await part.evaluate(animationWindow);
     assert.equal(reveal.start, sliceDelays[0]);
@@ -232,13 +232,8 @@ try {
   const touchPage = await browser.newPage({ viewport: { width: 393, height: 720 }, isMobile: true, hasTouch: true });
   touchPage.on("pageerror", error => errors.push(error.message));
   await touchPage.addInitScript(() => {
-    const observer = new MutationObserver(() => {
-      if (!document.querySelector(".hero-backdrop canvas")) return;
-      window.shaderStartedDuringTitle = document.querySelector("#headline").getAnimations({ subtree: true })
-        .some(animation => animation.playState === "running");
-      observer.disconnect();
-    });
-    observer.observe(document, { childList: true, subtree: true });
+    const adapter = new Promise(resolve => { window.finishShaderRequest = () => resolve(null); });
+    Object.defineProperty(navigator, "gpu", { value: { requestAdapter: () => adapter } });
   });
   let releaseFonts;
   const fontsHeld = new Promise(resolve => { releaseFonts = resolve; });
@@ -254,6 +249,10 @@ try {
   let layoutBeforeFonts;
   try {
     await touchPage.goto(url, { waitUntil: "domcontentloaded" });
+    await touchPage.locator(".hero-backdrop canvas").waitFor({ state: "attached" });
+    assert.equal(await touchPage.locator(".hero-glyph").first().evaluate(el => getComputedStyle(el).animationPlayState), "paused");
+    assert.equal(await touchPage.locator(".hero-backdrop").evaluate(el => getComputedStyle(el).opacity), "0");
+    await touchPage.evaluate(() => window.finishShaderRequest());
     assert.deepEqual(await touchPage.locator(".actions").evaluate(el => {
       const style = getComputedStyle(el);
       return [style.animationName, style.animationDuration, style.animationTimingFunction];
@@ -267,8 +266,6 @@ try {
   }
   await touchPage.evaluate(() => document.fonts.ready);
   assert.deepEqual(await heroLayout(), layoutBeforeFonts);
-  await touchPage.locator(".hero-backdrop canvas").waitFor({ state: "attached" });
-  assert.equal(await touchPage.evaluate(() => window.shaderStartedDuringTitle), false);
   assert.equal(await touchPage.evaluate(() => window.scrollY), 0);
   const heroHeight = await touchPage.locator(".hero").evaluate(el => el.clientHeight);
   await touchPage.evaluate(() => window.scrollTo({ top: 160, behavior: "instant" }));

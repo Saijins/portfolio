@@ -45,7 +45,7 @@ function TypedService() {
 export function Hero() {
   const hero = useRef<HTMLElement>(null);
   const [motionActive, setMotionActive] = useState(false);
-  const [titleSettled, setTitleSettled] = useState(false);
+  const [introReady, setIntroReady] = useState(false);
 
   useEffect(() => {
     const preference = matchMedia("(prefers-reduced-motion: reduce)");
@@ -67,21 +67,17 @@ export function Hero() {
   }, []);
 
   useEffect(() => {
-    if (!motionActive || titleSettled) return;
-    // Loading the shader during the title reveal can interrupt frames in Chromium.
-    const animations = hero.current!.querySelector("#headline")!.getAnimations({ subtree: true });
-    let active = true;
-    void Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
-      if (active) setTitleSettled(true);
-    });
-    return () => { active = false; };
-  }, [motionActive, titleSettled]);
+    if (introReady) return;
+    // A stalled GPU must not keep the page hidden.
+    const timeout = window.setTimeout(() => setIntroReady(true), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [introReady]);
 
   return (
-    <section className="hero" id="seitenanfang" ref={hero} tabIndex={-1} aria-labelledby="headline">
+    <section className="hero" id="seitenanfang" ref={hero} tabIndex={-1} aria-labelledby="headline" data-intro-pending={!introReady || undefined}>
       <div className="hero-backdrop" aria-hidden="true">
         <div className="shader-media">
-          <div className="shader-plane">{motionActive && titleSettled && <ShaderBackdrop />}</div>
+          <div className="shader-plane">{motionActive && <ShaderBackdrop onSettled={() => setIntroReady(true)} />}</div>
         </div>
       </div>
       <div className="hero-copy">
@@ -102,7 +98,7 @@ export function Hero() {
         </h1>
         <p className="hero-lead"><span className="lead-prefix">Dein Ansprechpartner für</span>{" "}
           <span className="terms" aria-hidden="true">
-            {motionActive ? <TypedService /> : (
+            {motionActive && introReady ? <TypedService /> : (
               <span>{services[0]}<span className="reduced-services"> · {services.slice(1).join(" · ")}</span></span>
             )}
           </span>

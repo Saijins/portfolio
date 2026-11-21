@@ -74,17 +74,12 @@ a:hover { text-decoration: underline; text-underline-offset: 5px }
 .rolling-label > span:first-child { grid-area: 1 / 1; transform: var(--roll-out, none) }
 .rolling-label > span:last-child { grid-area: 1 / 1; transform: var(--roll-in, translateY(-100%)) }
 .menu-toggle[aria-expanded="true"] { --roll-out: translateY(100%); --roll-in: none }
-.hero { position: relative; isolation: isolate; overflow-x: clip; min-height: 100vh; min-height: 100svh; display: grid; place-items: center; padding: 105px 20px; text-align: center }
+.hero { position: relative; isolation: isolate; overflow-x: clip; min-height: 100vh; min-height: 100svh; display: grid; place-items: center; padding: 105px 20px; text-align: center; background: #000 }
 .hero-backdrop {
   position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
 }
 .shader-media, .shader-plane, .shader-live { position: absolute; inset: 0 }
-.shader-plane {
-  inset: -36px;
-  background:
-    repeating-linear-gradient(124deg, transparent 0 17%, #bfb29924 21%, #15130f70 23%, transparent 29%),
-    radial-gradient(ellipse at 74% 28%, #514e43 0, #2d2b25 35%, #151512 78%);
-}
+.shader-plane { inset: -36px }
 .shader-live { overflow: hidden; opacity: 0 }
 .shader-live[data-ready] { opacity: 1 }
 .hero-backdrop::after, .shader-live::after {
@@ -95,6 +90,9 @@ a:hover { text-decoration: underline; text-underline-offset: 5px }
     linear-gradient(to bottom, transparent 68%, #10101055 80%, var(--page-bg) 100%),
     radial-gradient(ellipse at center, transparent 50%, #10101066 85%, #101010aa 100%),
     #100f0e24;
+}
+.hero-backdrop:not(:has(.shader-live[data-ready]))::after {
+  background: linear-gradient(to bottom, transparent 90%, var(--page-bg));
 }
 .hero-copy { position: relative; z-index: 1; max-width: 100%; margin-inline: auto; color: hsl(0 0% 96%) }
 .hero-copy:has(:focus-visible) { opacity: 1 !important; transform: none !important }
@@ -203,11 +201,6 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
 }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; --name-intro: 500ms }
-  .hero::before {
-    content: ""; position: absolute; inset: 0; z-index: -2;
-    background: #000; pointer-events: none;
-    animation: fade-out .7s ease-out var(--name-intro) both;
-  }
   .hero-backdrop { animation: shader-arrive 1.3s cubic-bezier(.2,.8,.2,1) var(--name-intro) both }
   .shader-live[data-ready] { animation: fade-in .65s ease-out both }
   .topnav { animation: nav-arrive .8s cubic-bezier(.2,.8,.2,1) var(--name-intro) backwards }
@@ -246,6 +239,13 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
   .hero-slice:nth-child(3) { --offset: 200ms; clip-path: inset(65% 0 0) }
   .project-card .project-media { background-size: 100% calc(100% + 112px) }
 }
+@media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+  html:has(.hero[data-intro-pending]) { --intro-play-state: paused }
+  .hero-backdrop, .topnav:not([data-scrolled]), .scroll-cue > span,
+  .hero-copy :is(.hero-glyph, .hero-slice, .hero-lead, .hero-description, .actions) {
+    animation-play-state: var(--intro-play-state, running);
+  }
+}
 @media (hover: none) and (pointer: coarse) {
   .hero { --copy-intro: fade-in }
 }
@@ -255,9 +255,6 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
 }
 @keyframes fade-in {
   from { opacity: 0 }
-}
-@keyframes fade-out {
-  to { opacity: 0 }
 }
 @keyframes copy-arrive {
   from { opacity: 0; transform: translateY(17px); filter: blur(4px) }
