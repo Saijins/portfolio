@@ -231,14 +231,33 @@ try {
 
   const touchPage = await browser.newPage({ viewport: { width: 393, height: 720 }, isMobile: true, hasTouch: true });
   touchPage.on("pageerror", error => errors.push(error.message));
-  await touchPage.goto(url);
-  assert.deepEqual(await touchPage.locator(".actions").evaluate(el => {
-    const style = getComputedStyle(el);
-    return [style.animationName, style.animationDuration, style.animationTimingFunction];
-  }), ["fade-in", "0.85s", "ease-in-out"]);
-  await touchPage.waitForFunction(() =>
-    [...document.querySelectorAll(".name, .hero-lead, .hero-description, .actions")]
-      .every(el => getComputedStyle(el).opacity === "1"));
+  let releaseFonts;
+  const fontsHeld = new Promise(resolve => { releaseFonts = resolve; });
+  await touchPage.route("**/*.woff2", async route => {
+    await fontsHeld;
+    await route.continue();
+  });
+  const heroLayout = () => touchPage.locator(".hero-copy, .hero-word, .lead-prefix, .actions").evaluateAll(elements =>
+    elements.map(el => {
+      const { x, y, width, height } = el.getBoundingClientRect();
+      return [x, y, width, height];
+    }));
+  let layoutBeforeFonts;
+  try {
+    await touchPage.goto(url, { waitUntil: "domcontentloaded" });
+    assert.deepEqual(await touchPage.locator(".actions").evaluate(el => {
+      const style = getComputedStyle(el);
+      return [style.animationName, style.animationDuration, style.animationTimingFunction];
+    }), ["fade-in", "0.85s", "ease-in-out"]);
+    await touchPage.waitForFunction(() =>
+      [...document.querySelectorAll(".name, .hero-lead, .hero-description, .actions, .hero-glyph")]
+        .every(el => getComputedStyle(el).opacity === "1"));
+    layoutBeforeFonts = await heroLayout();
+  } finally {
+    releaseFonts();
+  }
+  await touchPage.evaluate(() => document.fonts.ready);
+  assert.deepEqual(await heroLayout(), layoutBeforeFonts);
   assert.equal(await touchPage.evaluate(() => window.scrollY), 0);
   const heroHeight = await touchPage.locator(".hero").evaluate(el => el.clientHeight);
   await touchPage.evaluate(() => window.scrollTo({ top: 160, behavior: "instant" }));

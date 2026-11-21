@@ -10,8 +10,8 @@
 
 :root {
   color-scheme: dark;
-  --display: "Inter Variable", sans-serif;
-  --italic: "Instrument Serif", Georgia, serif;
+  --display: var(--font-inter), sans-serif;
+  --italic: var(--font-instrument-serif), Georgia, serif;
   --muted: #b4b4b4;
   --stroke: #343434;
   --link-hover-background: #ffffff19;
