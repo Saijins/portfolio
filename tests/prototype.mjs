@@ -90,6 +90,7 @@ try {
   await page.getByRole("navigation").getByRole("link", { name: "Kontakt", exact: true }).click();
   assert.equal(await menu.getAttribute("aria-expanded"), "false");
   assert.equal(await page.locator("#kontakt").evaluate(el => el === document.activeElement), true);
+  assert.equal(await page.locator("#kontakt").evaluate(el => getComputedStyle(el).outlineStyle), "none");
   assert.equal(await page.locator("footer").getByRole("link", { name: "Kontakt", exact: true }).getAttribute("href"), "#kontakt");
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => { document.documentElement.style.zoom = "2"; });
@@ -231,6 +232,10 @@ try {
   const touchPage = await browser.newPage({ viewport: { width: 393, height: 720 }, isMobile: true, hasTouch: true });
   touchPage.on("pageerror", error => errors.push(error.message));
   await touchPage.goto(url);
+  assert.deepEqual(await touchPage.locator(".actions").evaluate(el => {
+    const style = getComputedStyle(el);
+    return [style.animationName, style.animationDuration, style.animationTimingFunction];
+  }), ["fade-in", "0.85s", "ease-in-out"]);
   await touchPage.waitForFunction(() =>
     [...document.querySelectorAll(".name, .hero-lead, .hero-description, .actions")]
       .every(el => getComputedStyle(el).opacity === "1"));
@@ -243,6 +248,10 @@ try {
   });
   assert.equal(await touchPage.locator(".hero-copy").evaluate(el => getComputedStyle(el).opacity), "1");
   assert.equal(await touchPage.locator(".hero").evaluate(el => el.clientHeight), heroHeight);
+  await touchPage.getByRole("button", { name: "Menü", exact: true }).tap();
+  await touchPage.getByRole("navigation").getByRole("link", { name: "Leistungen", exact: true }).tap();
+  assert.equal(new URL(touchPage.url()).hash, "#leistungen");
+  assert.equal(await touchPage.locator("#leistungen").evaluate(el => getComputedStyle(el).outlineStyle), "none");
   await touchPage.close();
   assert.deepEqual(errors, []);
   console.log("OK: Layout, Glasnavigation, Kontaktbutton, Hero- und Projektparallaxe, Projektanker und reduzierte Bewegung.");
