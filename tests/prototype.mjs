@@ -231,6 +231,15 @@ try {
 
   const touchPage = await browser.newPage({ viewport: { width: 393, height: 720 }, isMobile: true, hasTouch: true });
   touchPage.on("pageerror", error => errors.push(error.message));
+  await touchPage.addInitScript(() => {
+    const observer = new MutationObserver(() => {
+      if (!document.querySelector(".hero-backdrop canvas")) return;
+      window.shaderStartedDuringTitle = document.querySelector("#headline").getAnimations({ subtree: true })
+        .some(animation => animation.playState === "running");
+      observer.disconnect();
+    });
+    observer.observe(document, { childList: true, subtree: true });
+  });
   let releaseFonts;
   const fontsHeld = new Promise(resolve => { releaseFonts = resolve; });
   await touchPage.route("**/*.woff2", async route => {
@@ -258,6 +267,8 @@ try {
   }
   await touchPage.evaluate(() => document.fonts.ready);
   assert.deepEqual(await heroLayout(), layoutBeforeFonts);
+  await touchPage.locator(".hero-backdrop canvas").waitFor({ state: "attached" });
+  assert.equal(await touchPage.evaluate(() => window.shaderStartedDuringTitle), false);
   assert.equal(await touchPage.evaluate(() => window.scrollY), 0);
   const heroHeight = await touchPage.locator(".hero").evaluate(el => el.clientHeight);
   await touchPage.evaluate(() => window.scrollTo({ top: 160, behavior: "instant" }));

@@ -45,6 +45,7 @@ function TypedService() {
 export function Hero() {
   const hero = useRef<HTMLElement>(null);
   const [motionActive, setMotionActive] = useState(false);
+  const [titleSettled, setTitleSettled] = useState(false);
 
   useEffect(() => {
     const preference = matchMedia("(prefers-reduced-motion: reduce)");
@@ -65,11 +66,22 @@ export function Hero() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!motionActive || titleSettled) return;
+    // Loading the shader during the title reveal can interrupt frames in Chromium.
+    const animations = hero.current!.querySelector("#headline")!.getAnimations({ subtree: true });
+    let active = true;
+    void Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
+      if (active) setTitleSettled(true);
+    });
+    return () => { active = false; };
+  }, [motionActive, titleSettled]);
+
   return (
     <section className="hero" id="seitenanfang" ref={hero} tabIndex={-1} aria-labelledby="headline">
       <div className="hero-backdrop" aria-hidden="true">
         <div className="shader-media">
-          <div className="shader-plane">{motionActive && <ShaderBackdrop />}</div>
+          <div className="shader-plane">{motionActive && titleSettled && <ShaderBackdrop />}</div>
         </div>
       </div>
       <div className="hero-copy">
