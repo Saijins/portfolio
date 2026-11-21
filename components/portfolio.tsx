@@ -170,7 +170,7 @@ export function Portfolio({ children }: { children: ReactNode }) {
               <ul className="footer-socials" aria-label="Soziale Medien">
                 {["Instagram", "LinkedIn", "TikTok"].map((platform) => (
                   <li key={platform}>
-                    <img src={`/social/${platform.toLowerCase()}.svg`} width="18" height="18" alt={platform} />
+                    <img src={`${process.env.NEXT_PUBLIC_PAGES_BASE_PATH ?? ""}/social/${platform.toLowerCase()}.svg`} width="18" height="18" alt={platform} />
                   </li>
                 ))}
               </ul>
