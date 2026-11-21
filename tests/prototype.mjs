@@ -227,6 +227,23 @@ try {
   await heroContact.hover();
   await page.waitForFunction(() => getComputedStyle(document.querySelector(".actions .pill-arrow svg")).transform === "none");
   assert.equal(await heroContact.evaluate(el => getComputedStyle(el).outlineStyle), "none");
+
+  const touchPage = await browser.newPage({ viewport: { width: 393, height: 720 }, isMobile: true, hasTouch: true });
+  touchPage.on("pageerror", error => errors.push(error.message));
+  await touchPage.goto(url);
+  await touchPage.waitForFunction(() =>
+    [...document.querySelectorAll(".name, .hero-lead, .hero-description, .actions")]
+      .every(el => getComputedStyle(el).opacity === "1"));
+  assert.equal(await touchPage.evaluate(() => window.scrollY), 0);
+  const heroHeight = await touchPage.locator(".hero").evaluate(el => el.clientHeight);
+  await touchPage.evaluate(() => window.scrollTo({ top: 160, behavior: "instant" }));
+  await touchPage.waitForFunction(() => {
+    const shader = getComputedStyle(document.querySelector(".shader-media"));
+    return new DOMMatrix(shader.transform).m42 > 0;
+  });
+  assert.equal(await touchPage.locator(".hero-copy").evaluate(el => getComputedStyle(el).opacity), "1");
+  assert.equal(await touchPage.locator(".hero").evaluate(el => el.clientHeight), heroHeight);
+  await touchPage.close();
   assert.deepEqual(errors, []);
   console.log("OK: Layout, Glasnavigation, Kontaktbutton, Hero- und Projektparallaxe, Projektanker und reduzierte Bewegung.");
 } finally {

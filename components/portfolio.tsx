@@ -49,18 +49,26 @@ export function Portfolio({ children }: { children: ReactNode }) {
 
     gsap.registerPlugin(ScrollTrigger, CustomEase);
     const motion = gsap.matchMedia(root);
-    motion.add("(prefers-reduced-motion: no-preference)", () => {
+    motion.add({
+      animate: "(prefers-reduced-motion: no-preference)",
+      touch: "(hover: none) and (pointer: coarse)",
+    }, ({ conditions }) => {
+      if (!conditions?.animate) return;
       const q = gsap.utils.selector(sections);
-      gsap.timeline({
+      const heroScroll = gsap.timeline({
         defaults: { ease: "none" },
         scrollTrigger: { trigger: hero, start: "top top", end: "bottom top", scrub: .6 },
-      })
-        .fromTo(q(".hero-backdrop"), { clipPath: "inset(0% 0% 0% 0% round 0px)" }, {
+      });
+      if (conditions.touch) {
+        heroScroll.to(q(".shader-media"), { yPercent: 8, scale: 1.08 }, 0);
+      } else {
+        heroScroll.fromTo(q(".hero-backdrop"), { clipPath: "inset(0% 0% 0% 0% round 0px)" }, {
           clipPath: "inset(7% 3.5% 0% 3.5% round 32px)",
         }, 0)
-        .to(q(".shader-media"), { yPercent: 24, scale: 1.24 }, 0)
-        .to(q(".hero-copy"), { yPercent: -42, opacity: 0 }, 0)
-        .to(q(".scroll-cue"), { opacity: 0, duration: .18 }, 0);
+          .to(q(".shader-media"), { yPercent: 24, scale: 1.24 }, 0)
+          .to(q(".hero-copy"), { yPercent: -42, opacity: 0 }, 0);
+      }
+      heroScroll.to(q(".scroll-cue"), { opacity: 0, duration: .18 }, 0);
 
       // Reveal timing from Hirael Portfolio (MIT, Mohammad Shehadeh).
       const reveal = { opacity: 0, y: 30, ease: CustomEase.create("", ".25,.1,.25,1") };
