@@ -74,7 +74,11 @@ a:hover { text-decoration: underline; text-underline-offset: 5px }
 .rolling-label > span:first-child { grid-area: 1 / 1; transform: var(--roll-out, none) }
 .rolling-label > span:last-child { grid-area: 1 / 1; transform: var(--roll-in, translateY(-100%)) }
 .menu-toggle[aria-expanded="true"] { --roll-out: translateY(100%); --roll-in: none }
-.hero { position: relative; isolation: isolate; overflow-x: clip; min-height: 100vh; min-height: 100svh; display: grid; place-items: center; padding: 105px 20px; text-align: center; background: #000 }
+.hero {
+  position: relative; isolation: isolate; overflow-x: clip; min-height: 100vh; min-height: 100svh;
+  display: grid; place-items: center; padding: 105px 20px; text-align: center;
+  background: #000 linear-gradient(transparent 90%, var(--page-bg) 98%);
+}
 .hero-backdrop {
   position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
 }
@@ -201,13 +205,17 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
 }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; --name-intro: 500ms }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; z-index: -2; pointer-events: none;
+    background: #000; animation: fade-out .7s ease-out var(--name-intro) both;
+  }
   .hero-backdrop { animation: shader-arrive 1.3s cubic-bezier(.2,.8,.2,1) var(--name-intro) both }
   .shader-live[data-ready] { animation: fade-in .65s ease-out both }
   .topnav { animation: nav-arrive .8s cubic-bezier(.2,.8,.2,1) var(--name-intro) backwards }
   .topnav:focus-within { opacity: 1 !important; transform: none !important }
   .name { animation: fade-in .4s ease-out }
   .hero-copy :is(.hero-lead, .hero-description), .scroll-cue > span {
-    animation: var(--copy-intro, copy-arrive) .65s cubic-bezier(.2,.8,.2,1) calc(var(--name-intro) + var(--intro-delay)) backwards;
+    animation: copy-arrive .65s cubic-bezier(.2,.8,.2,1) calc(var(--name-intro) + var(--intro-delay)) backwards;
   }
   .hero-copy .actions { animation: fade-in .85s ease-in-out calc(var(--name-intro) + .65s) backwards }
   .hero-copy .actions:has(:focus-visible) { animation: none }
@@ -241,13 +249,13 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
 }
 @media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
   html:has(.hero[data-intro-pending]) { --intro-play-state: paused }
-  .hero-backdrop, .topnav:not([data-scrolled]), .scroll-cue > span,
+  .hero::before, .hero-backdrop, .topnav:not([data-scrolled]), .scroll-cue > span,
   .hero-copy :is(.hero-glyph, .hero-slice, .hero-lead, .hero-description, .actions) {
     animation-play-state: var(--intro-play-state, running);
   }
 }
 @media (hover: none) and (pointer: coarse) and (prefers-reduced-motion: no-preference) {
-  .hero { --copy-intro: fade-in }
+  .scroll-cue > span { animation-name: fade-in }
   /* Keep the paint layer when the intro ends so WebKit does not snap the content. */
   .hero-copy :is(.hero-glyph, .hero-lead, .hero-description, .actions) { will-change: opacity }
 }
@@ -257,6 +265,9 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
 }
 @keyframes fade-in {
   from { opacity: 0 }
+}
+@keyframes fade-out {
+  to { opacity: 0 }
 }
 @keyframes copy-arrive {
   from { opacity: 0; transform: translateY(17px); filter: blur(4px) }
