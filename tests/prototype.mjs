@@ -266,6 +266,8 @@ try {
   }
   await touchPage.evaluate(() => document.fonts.ready);
   assert.deepEqual(await heroLayout(), layoutBeforeFonts);
+  const mobileIntro = touchPage.locator(".hero-copy :is(.hero-glyph, .hero-lead, .hero-description, .actions)");
+  assert.ok(await mobileIntro.evaluateAll(elements => elements.every(el => getComputedStyle(el).willChange === "opacity")));
   assert.equal(await touchPage.evaluate(() => window.scrollY), 0);
   const heroHeight = await touchPage.locator(".hero").evaluate(el => el.clientHeight);
   await touchPage.evaluate(() => window.scrollTo({ top: 160, behavior: "instant" }));

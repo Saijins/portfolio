@@ -246,8 +246,10 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
     animation-play-state: var(--intro-play-state, running);
   }
 }
-@media (hover: none) and (pointer: coarse) {
+@media (hover: none) and (pointer: coarse) and (prefers-reduced-motion: no-preference) {
   .hero { --copy-intro: fade-in }
+  /* Keep the paint layer when the intro ends so WebKit does not snap the content. */
+  .hero-copy :is(.hero-glyph, .hero-lead, .hero-description, .actions) { will-change: opacity }
 }
 @keyframes shader-arrive {
   from { opacity: 0; scale: 1.2 }
