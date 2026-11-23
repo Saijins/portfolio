@@ -45,9 +45,14 @@ function TypedService() {
 export function Hero() {
   const hero = useRef<HTMLElement>(null);
   const [motionActive, setMotionActive] = useState(false);
+  const [shaderSupported, setShaderSupported] = useState(false);
   const [introReady, setIntroReady] = useState(false);
 
   useEffect(() => {
+    const supportsShader = "gpu" in navigator && Boolean(navigator.gpu);
+    setShaderSupported(supportsShader);
+    if (!supportsShader) setIntroReady(true);
+
     const preference = matchMedia("(prefers-reduced-motion: reduce)");
     let inView = true;
     const update = () => setMotionActive(inView && !document.hidden && !preference.matches);
@@ -77,7 +82,7 @@ export function Hero() {
     <section className="hero" id="seitenanfang" ref={hero} tabIndex={-1} aria-labelledby="headline" data-intro-pending={!introReady || undefined}>
       <div className="hero-backdrop" aria-hidden="true">
         <div className="shader-media">
-          <div className="shader-plane">{motionActive && <ShaderBackdrop onSettled={() => setIntroReady(true)} />}</div>
+          <div className="shader-plane">{motionActive && shaderSupported && <ShaderBackdrop onSettled={() => setIntroReady(true)} />}</div>
         </div>
       </div>
       <div className="hero-copy">

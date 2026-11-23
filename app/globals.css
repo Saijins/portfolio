@@ -259,6 +259,11 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
   /* Keep the paint layer when the intro ends so WebKit does not snap the content. */
   .hero-copy :is(.hero-glyph, .hero-lead, .hero-description, .actions) { will-change: opacity }
 }
+@media (pointer: coarse) {
+  .footer-group:has(a) { gap: 0 }
+  .footer-base { align-items: center }
+  .footer-group a, .footer-base a { display: inline-flex; align-items: center; min-height: 44px }
+}
 @keyframes shader-arrive {
   from { opacity: 0; scale: 1.2 }
   to { opacity: 1; scale: 1 }

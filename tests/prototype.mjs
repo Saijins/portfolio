@@ -285,7 +285,17 @@ try {
   await touchPage.getByRole("navigation").getByRole("link", { name: "Leistungen", exact: true }).tap();
   assert.equal(new URL(touchPage.url()).hash, "#leistungen");
   assert.equal(await touchPage.locator("#leistungen").evaluate(el => getComputedStyle(el).outlineStyle), "none");
+  const footerLinks = await touchPage.locator("footer a").evaluateAll(links => links.map(link => link.getBoundingClientRect().height));
+  assert.ok(footerLinks.every(height => height >= 44));
   await touchPage.close();
+
+  const noGpuPage = await browser.newPage();
+  noGpuPage.on("pageerror", error => errors.push(error.message));
+  await noGpuPage.addInitScript(() => Object.defineProperty(navigator, "gpu", { value: undefined }));
+  await noGpuPage.goto(url);
+  await noGpuPage.locator(".typed-service").waitFor();
+  assert.equal(await noGpuPage.locator(".hero-backdrop canvas").count(), 0);
+  await noGpuPage.close();
   assert.deepEqual(errors, []);
   console.log("OK: Layout, Glasnavigation, Kontaktbutton, Hero- und Projektparallaxe, Projektanker und reduzierte Bewegung.");
 } finally {
