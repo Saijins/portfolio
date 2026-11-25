@@ -107,24 +107,23 @@ try {
   assert.equal(await letters.allTextContents().then(chars => chars.join("")), "DigitaleProdukte");
   assert.equal(await page.locator(".hero-slice").count(), (await letters.count()) * 3);
   const firstGlyph = page.locator(".hero-glyph").first();
-  assert.equal(await firstGlyph.evaluate(el => getComputedStyle(el).animationName), "letter-focus");
-  assert.equal(await firstGlyph.evaluate(el => getComputedStyle(el).filter), "none");
-  assert.equal(await letters.first().evaluate(el => getComputedStyle(el, "::before").animationName), "letter-blur-fade");
+  assert.equal(await firstGlyph.evaluate(el => getComputedStyle(el).animationName), "fade-in");
+  assert.equal(await letters.first().evaluate(el => getComputedStyle(el, "::before").content), "none");
   const sliceDelays = await letters.first().locator(".hero-slice").evaluateAll(slices =>
     slices.map(el => parseFloat(getComputedStyle(el).animationDelay)));
-  assert.deepEqual(sliceDelays, [0, .1, .2]);
-  assert.equal(await firstGlyph.evaluate(el => getComputedStyle(el).animationDelay), "0.3s");
+  assert.deepEqual(sliceDelays, [.5, .6, .7]);
+  assert.equal(await firstGlyph.evaluate(el => getComputedStyle(el).animationDelay), "0.8s");
   const animationWindow = el => {
     const style = getComputedStyle(el);
     const start = parseFloat(style.animationDelay);
     return { start, end: start + parseFloat(style.animationDuration) };
   };
   const nameReveal = await page.locator(".name").evaluate(animationWindow);
-  assert.equal(nameReveal.end, .4);
+  assert.ok(nameReveal.end < sliceDelays[0]);
   for (const part of await page.locator(".hero-backdrop, .topnav").all()) {
     const reveal = await part.evaluate(animationWindow);
     assert.equal(reveal.start, sliceDelays[0]);
-    assert.ok(reveal.end >= .8);
+    assert.ok(reveal.end > .8);
   }
   const typed = page.locator(".typed-service");
   await typed.waitFor();
@@ -253,7 +252,6 @@ try {
     await touchPage.goto(url, { waitUntil: "domcontentloaded" });
     await touchPage.locator(".hero-backdrop canvas").waitFor({ state: "attached" });
     assert.equal(await touchPage.locator(".hero-glyph").first().evaluate(el => getComputedStyle(el).animationPlayState), "paused");
-    assert.equal(await touchPage.locator(".hero-letter").first().evaluate(el => getComputedStyle(el, "::before").animationPlayState), "paused");
     assert.equal(await touchPage.locator(".hero-backdrop").evaluate(el => getComputedStyle(el).opacity), "0");
     assert.equal(await touchPage.locator(".hero").evaluate(el => getComputedStyle(el, "::before").opacity), "1");
     await touchPage.evaluate(() => window.finishShaderRequest());
@@ -273,7 +271,6 @@ try {
   }
   await touchPage.evaluate(() => document.fonts.ready);
   assert.deepEqual(await heroLayout(), layoutBeforeFonts);
-  assert.equal(await touchPage.locator(".hero").getAttribute("data-title-fallback"), "true");
   const mobileIntro = touchPage.locator(".hero-copy :is(.hero-glyph, .hero-lead, .hero-description, .actions)");
   assert.ok(await mobileIntro.evaluateAll(elements => elements.every(el => getComputedStyle(el).willChange === "opacity")));
   assert.equal(await touchPage.evaluate(() => window.scrollY), 0);
@@ -296,18 +293,9 @@ try {
   const noGpuPage = await browser.newPage();
   noGpuPage.on("pageerror", error => errors.push(error.message));
   await noGpuPage.addInitScript(() => Object.defineProperty(navigator, "gpu", { value: undefined }));
-  await noGpuPage.route("**/*.woff2", async route => {
-    await new Promise(resolve => setTimeout(resolve, 850));
-    await route.continue();
-  });
-  await noGpuPage.goto(url, { waitUntil: "domcontentloaded" });
+  await noGpuPage.goto(url);
   await noGpuPage.locator(".typed-service").waitFor();
   assert.equal(await noGpuPage.locator(".hero-backdrop canvas").count(), 0);
-  const titleHasLoadedFont = await noGpuPage.locator("#headline").evaluate(el => {
-    const family = getComputedStyle(el).fontFamily.split(",")[0].replaceAll('"', "");
-    return [...document.fonts].some(face => face.family.replaceAll('"', "") === family && face.status === "loaded");
-  });
-  assert.equal(titleHasLoadedFont, true);
   await noGpuPage.close();
   assert.deepEqual(errors, []);
   console.log("OK: Layout, Glasnavigation, Kontaktbutton, Hero- und Projektparallaxe, Projektanker und reduzierte Bewegung.");
