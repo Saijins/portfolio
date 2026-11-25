@@ -44,45 +44,70 @@ function TypedService() {
 
 export function Hero() {
   const hero = useRef<HTMLElement>(null);
+  const settleShader = useRef<(() => void) | null>(null);
   const [motionActive, setMotionActive] = useState(false);
   const [shaderSupported, setShaderSupported] = useState(false);
-  const [introReady, setIntroReady] = useState(false);
+  const [intro, setIntro] = useState<"pending" | "ready" | "fallback">("pending");
+  const introReady = intro !== "pending";
 
   useEffect(() => {
+    const element = hero.current!;
     const supportsShader = "gpu" in navigator && Boolean(navigator.gpu);
     setShaderSupported(supportsShader);
-    if (!supportsShader) setIntroReady(true);
+
+    const shaderReady = new Promise<void>(resolve => { settleShader.current = resolve; });
+    const nameStart = element.querySelector(".name")?.getAnimations()[0]?.startTime;
+    const remaining = typeof nameStart === "number" ? Math.max(0, nameStart + 500 - performance.now()) : 500;
+    let nameTimer = 0;
+    const nameReady = new Promise<void>(resolve => { nameTimer = window.setTimeout(resolve, remaining); });
+    const family = getComputedStyle(element).getPropertyValue("--font-instrument-serif").split(",")[0];
+    let fontAvailable = false;
+    const fontReady = document.fonts.load(`italic 400 1em ${family}`, headline).then(
+      faces => { fontAvailable = faces.length > 0; },
+      () => {},
+    );
+    let introPending = true;
+    function startIntro() {
+      if (!introPending) return;
+      introPending = false;
+      window.clearTimeout(deadline);
+      setIntro(fontAvailable ? "ready" : "fallback");
+    }
+    // A stalled font or GPU must not keep the page hidden.
+    const deadline = window.setTimeout(startIntro, 4000);
+    void Promise.all([nameReady, shaderReady, fontReady]).then(startIntro);
 
     const preference = matchMedia("(prefers-reduced-motion: reduce)");
     let inView = true;
-    const update = () => setMotionActive(inView && !document.hidden && !preference.matches);
+    const update = () => {
+      setMotionActive(inView && !document.hidden && !preference.matches);
+      if (!supportsShader || !inView || preference.matches) settleShader.current?.();
+    };
     const observer = new IntersectionObserver(([entry]) => {
       inView = entry.isIntersecting;
       update();
     });
-    observer.observe(hero.current!);
+    observer.observe(element);
     preference.addEventListener("change", update);
     document.addEventListener("visibilitychange", update);
     update();
     return () => {
+      introPending = false;
+      settleShader.current = null;
+      window.clearTimeout(nameTimer);
+      window.clearTimeout(deadline);
       observer.disconnect();
       preference.removeEventListener("change", update);
       document.removeEventListener("visibilitychange", update);
     };
   }, []);
 
-  useEffect(() => {
-    if (introReady) return;
-    // A stalled GPU must not keep the page hidden.
-    const timeout = window.setTimeout(() => setIntroReady(true), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [introReady]);
-
   return (
-    <section className="hero" id="seitenanfang" ref={hero} tabIndex={-1} aria-labelledby="headline" data-intro-pending={!introReady || undefined}>
+    <section className="hero" id="seitenanfang" ref={hero} tabIndex={-1} aria-labelledby="headline"
+      data-intro-pending={!introReady || undefined} data-title-fallback={intro === "fallback" || undefined}>
       <div className="hero-backdrop" aria-hidden="true">
         <div className="shader-media">
-          <div className="shader-plane">{motionActive && shaderSupported && <ShaderBackdrop onSettled={() => setIntroReady(true)} />}</div>
+          <div className="shader-plane">{motionActive && shaderSupported && <ShaderBackdrop onSettled={() => settleShader.current?.()} />}</div>
         </div>
       </div>
       <div className="hero-copy">

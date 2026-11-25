@@ -213,7 +213,7 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
   .shader-live[data-ready] { animation: fade-in .65s ease-out both }
   .topnav { animation: nav-arrive .8s cubic-bezier(.2,.8,.2,1) var(--name-intro) backwards }
   .topnav:focus-within { opacity: 1 !important; transform: none !important }
-  .name { animation: fade-in .4s ease-out }
+  .name { animation: fade-in .4s ease-out both }
   .hero-copy :is(.hero-lead, .hero-description), .scroll-cue > span {
     animation: copy-arrive .65s cubic-bezier(.2,.8,.2,1) calc(var(--name-intro) + var(--intro-delay)) backwards;
   }
@@ -248,7 +248,9 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
   .project-card .project-media { background-size: 100% calc(100% + 112px) }
 }
 @media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+  html { --name-intro: 0ms }
   html:has(.hero[data-intro-pending]) { --intro-play-state: paused }
+  .hero:is([data-intro-pending], [data-title-fallback]) { --italic: Georgia, serif }
   .hero::before, .hero-backdrop, .topnav:not([data-scrolled]), .scroll-cue > span,
   .hero-copy :is(.hero-glyph, .hero-slice, .hero-lead, .hero-description, .actions) {
     animation-play-state: var(--intro-play-state, running);
