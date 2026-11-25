@@ -111,19 +111,19 @@ try {
   assert.equal(await letters.first().evaluate(el => getComputedStyle(el, "::before").content), "none");
   const sliceDelays = await letters.first().locator(".hero-slice").evaluateAll(slices =>
     slices.map(el => parseFloat(getComputedStyle(el).animationDelay)));
-  assert.deepEqual(sliceDelays, [.5, .6, .7]);
-  assert.equal(await firstGlyph.evaluate(el => getComputedStyle(el).animationDelay), "0.8s");
+  assert.deepEqual(sliceDelays, [0, .1, .2]);
+  assert.equal(await firstGlyph.evaluate(el => getComputedStyle(el).animationDelay), "0.3s");
   const animationWindow = el => {
     const style = getComputedStyle(el);
     const start = parseFloat(style.animationDelay);
     return { start, end: start + parseFloat(style.animationDuration) };
   };
   const nameReveal = await page.locator(".name").evaluate(animationWindow);
-  assert.ok(nameReveal.end < sliceDelays[0]);
+  assert.equal(nameReveal.end, .5);
   for (const part of await page.locator(".hero-backdrop, .topnav").all()) {
     const reveal = await part.evaluate(animationWindow);
     assert.equal(reveal.start, sliceDelays[0]);
-    assert.ok(reveal.end > .8);
+    assert.ok(reveal.end >= .8);
   }
   const typed = page.locator(".typed-service");
   await typed.waitFor();
@@ -230,7 +230,7 @@ try {
   await page.waitForFunction(() => getComputedStyle(document.querySelector(".actions .pill-arrow svg")).transform === "none");
   assert.equal(await heroContact.evaluate(el => getComputedStyle(el).outlineStyle), "none");
 
-  const touchPage = await browser.newPage({ viewport: { width: 393, height: 720 }, isMobile: true, hasTouch: true });
+  const touchPage = await browser.newPage({ viewport: { width: 345, height: 720 }, isMobile: true, hasTouch: true });
   touchPage.on("pageerror", error => errors.push(error.message));
   await touchPage.addInitScript(() => {
     const adapter = new Promise(resolve => { window.finishShaderRequest = () => resolve(null); });
@@ -247,10 +247,12 @@ try {
       const { x, y, width, height } = el.getBoundingClientRect();
       return [x, y, width, height];
     }));
+  const nameTop = () => touchPage.locator(".name").evaluate(el => el.getBoundingClientRect().top);
+  let nameBeforeIntro;
   let layoutBeforeFonts;
   try {
     await touchPage.goto(url, { waitUntil: "domcontentloaded" });
-    await touchPage.locator(".hero-backdrop canvas").waitFor({ state: "attached" });
+    nameBeforeIntro = await nameTop();
     assert.equal(await touchPage.locator(".hero-glyph").first().evaluate(el => getComputedStyle(el).animationPlayState), "paused");
     assert.equal(await touchPage.locator(".hero-backdrop").evaluate(el => getComputedStyle(el).opacity), "0");
     assert.equal(await touchPage.locator(".hero").evaluate(el => getComputedStyle(el, "::before").opacity), "1");
@@ -270,7 +272,11 @@ try {
     releaseFonts();
   }
   await touchPage.evaluate(() => document.fonts.ready);
+  assert.equal(await touchPage.locator(".hero").getAttribute("data-title-fallback"), "true");
   assert.deepEqual(await heroLayout(), layoutBeforeFonts);
+  assert.equal(await nameTop(), nameBeforeIntro);
+  await touchPage.waitForFunction(() => document.querySelector(".typed-service")?.textContent === "Webanwendungen");
+  assert.equal(await nameTop(), nameBeforeIntro);
   const mobileIntro = touchPage.locator(".hero-copy :is(.hero-glyph, .hero-lead, .hero-description, .actions)");
   assert.ok(await mobileIntro.evaluateAll(elements => elements.every(el => getComputedStyle(el).willChange === "opacity")));
   assert.equal(await touchPage.evaluate(() => window.scrollY), 0);
@@ -290,11 +296,32 @@ try {
   assert.ok(footerLinks.every(height => height >= 44));
   await touchPage.close();
 
-  const noGpuPage = await browser.newPage();
+  const noGpuPage = await browser.newPage({ viewport: { width: 393, height: 720 }, isMobile: true, hasTouch: true });
   noGpuPage.on("pageerror", error => errors.push(error.message));
   await noGpuPage.addInitScript(() => Object.defineProperty(navigator, "gpu", { value: undefined }));
-  await noGpuPage.goto(url);
+  let releaseSlowFonts;
+  const slowFontsHeld = new Promise(resolve => { releaseSlowFonts = resolve; });
+  await noGpuPage.route("**/*.woff2", async route => {
+    await slowFontsHeld;
+    await route.continue();
+  });
+  let nameWhileLoading;
+  try {
+    await noGpuPage.goto(url, { waitUntil: "domcontentloaded" });
+    await noGpuPage.waitForFunction(() => getComputedStyle(document.querySelector(".name")).opacity === "1");
+    nameWhileLoading = await noGpuPage.locator(".name").evaluate(el => el.getBoundingClientRect().top);
+    assert.equal(await noGpuPage.locator(".hero").getAttribute("data-intro-pending"), "true");
+    assert.equal(await noGpuPage.locator(".hero-glyph").first().evaluate(el => getComputedStyle(el).opacity), "0");
+  } finally {
+    releaseSlowFonts();
+  }
   await noGpuPage.locator(".typed-service").waitFor();
+  const titleFontLoaded = await noGpuPage.locator("#headline").evaluate(el => {
+    const family = getComputedStyle(el).fontFamily.split(",")[0].replaceAll('"', "");
+    return [...document.fonts].some(face => face.family.replaceAll('"', "") === family && face.status === "loaded");
+  });
+  assert.equal(titleFontLoaded, true);
+  assert.equal(await noGpuPage.locator(".name").evaluate(el => el.getBoundingClientRect().top), nameWhileLoading);
   assert.equal(await noGpuPage.locator(".hero-backdrop canvas").count(), 0);
   await noGpuPage.close();
   assert.deepEqual(errors, []);
