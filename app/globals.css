@@ -233,7 +233,13 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
   .pill-arrow svg { transition: transform .4s cubic-bezier(.2,.8,.2,1) }
   .scroll-mouse::after { animation: scroll-wheel 1.8s cubic-bezier(.6,0,.3,1) infinite }
   .terms { display: inline-block; min-width: 7.5em; text-align: start }
-  .hero-glyph { display: inline-block; animation: letter-focus 800ms ease-out calc(var(--name-intro) + var(--delay) + 300ms) backwards }
+  .hero-letter { --glyph-delay: calc(var(--name-intro) + var(--delay) + 300ms) }
+  .hero-glyph { display: inline-block; animation: letter-focus 800ms ease-out var(--glyph-delay) backwards }
+  /* Crossfade a fixed blur to avoid steps when the browser rasterizes small blur radii. */
+  .hero-letter::before {
+    content: attr(data-letter); position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    filter: blur(.07em); animation: letter-blur-fade 800ms ease-out var(--glyph-delay);
+  }
   .hero-shutter { display: block; position: absolute; inset: 0; overflow: hidden; pointer-events: none }
   .hero-slice {
     --start: -100%;
@@ -251,7 +257,7 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
   html { --name-intro: 0ms }
   html:has(.hero[data-intro-pending]) { --intro-play-state: paused }
   .hero:is([data-intro-pending], [data-title-fallback]) { --italic: Georgia, serif }
-  .hero::before, .hero-backdrop, .topnav:not([data-scrolled]), .scroll-cue > span,
+  .hero::before, .hero-backdrop, .topnav:not([data-scrolled]), .scroll-cue > span, .hero-letter::before,
   .hero-copy :is(.hero-glyph, .hero-slice, .hero-lead, .hero-description, .actions) {
     animation-play-state: var(--intro-play-state, running);
   }
@@ -306,8 +312,13 @@ footer { padding-block: clamp(52px,7vw,100px) 28px; background: radial-gradient(
   .nav-links a:is(:hover, :focus-visible) { --roll-out: translateY(100%); --roll-in: none }
 }
 @keyframes letter-focus {
-  from { opacity: 0; filter: blur(10px) }
-  to { opacity: 1; filter: blur(0) }
+  from { opacity: 0 }
+  40% { opacity: .16 }
+  to { opacity: 1 }
+}
+@keyframes letter-blur-fade {
+  from, 80%, to { opacity: 0 }
+  30% { opacity: .68 }
 }
 @keyframes letter-slice {
   from { transform: translateX(var(--start)); opacity: 0 }

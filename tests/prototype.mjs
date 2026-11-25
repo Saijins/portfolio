@@ -108,6 +108,8 @@ try {
   assert.equal(await page.locator(".hero-slice").count(), (await letters.count()) * 3);
   const firstGlyph = page.locator(".hero-glyph").first();
   assert.equal(await firstGlyph.evaluate(el => getComputedStyle(el).animationName), "letter-focus");
+  assert.equal(await firstGlyph.evaluate(el => getComputedStyle(el).filter), "none");
+  assert.equal(await letters.first().evaluate(el => getComputedStyle(el, "::before").animationName), "letter-blur-fade");
   const sliceDelays = await letters.first().locator(".hero-slice").evaluateAll(slices =>
     slices.map(el => parseFloat(getComputedStyle(el).animationDelay)));
   assert.deepEqual(sliceDelays, [0, .1, .2]);
@@ -251,6 +253,7 @@ try {
     await touchPage.goto(url, { waitUntil: "domcontentloaded" });
     await touchPage.locator(".hero-backdrop canvas").waitFor({ state: "attached" });
     assert.equal(await touchPage.locator(".hero-glyph").first().evaluate(el => getComputedStyle(el).animationPlayState), "paused");
+    assert.equal(await touchPage.locator(".hero-letter").first().evaluate(el => getComputedStyle(el, "::before").animationPlayState), "paused");
     assert.equal(await touchPage.locator(".hero-backdrop").evaluate(el => getComputedStyle(el).opacity), "0");
     assert.equal(await touchPage.locator(".hero").evaluate(el => getComputedStyle(el, "::before").opacity), "1");
     await touchPage.evaluate(() => window.finishShaderRequest());

@@ -116,7 +116,7 @@ export function Hero() {
           {headline.split(" ").map((word, index) => (
             <span key={word} aria-hidden="true">{index > 0 && " "}
               <span className="hero-word">{Array.from(word, (letter, i) => (
-                <span className="hero-letter" key={i} style={{ "--delay": `${(headline.indexOf(word) + i) * 40}ms` } as CSSProperties}>
+                <span className="hero-letter" data-letter={letter} key={i} style={{ "--delay": `${(headline.indexOf(word) + i) * 40}ms` } as CSSProperties}>
                   <span className="hero-glyph">{letter}</span>
                   <span className="hero-shutter">
                     {[0, 1, 2].map(slice => <span className="hero-slice" data-letter={letter} key={slice} />)}
